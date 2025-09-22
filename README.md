@@ -1,6 +1,6 @@
-# ☕ CafeBabe
+# CityGuard
 
-CafeBabe is a full-stack **web application** that integrates **OpenStreetMap (OSM)** and the **OpenRouteService (ORS)** API to generate accessibility maps for people with mobility impairments.  
+CityGuard is a full-stack **web application** that integrates **OpenStreetMap (OSM)** and the **OpenRouteService (ORS)** API to generate accessibility maps for people with mobility impairments.  
 It is built to be **inclusive for everyone**, not only for people with disabilities — users can report **blocked areas** (e.g., cars parked on sidewalks) and help improve the accessibility of cities.
 
 ---
