@@ -107,7 +107,7 @@ async def seed_reports():
             }
             reports.append(report)
 
-ORS_API_KEY = "5b3ce3597851110001cf6248946090ae950048999bef583e7ecfdee4"  # Load the API key from environment variables
+ORS_API_KEY = "" # Load the API key from environment variables
 
 @app.post("/proxy/ors")
 async def proxy_openrouteservice(request: Request):
