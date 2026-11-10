@@ -1,393 +1,160 @@
-import React, { useState, useEffect } from 'react';
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Polyline,
-  Circle,
-  useMapEvents,
-  Popup,
-} from 'react-leaflet';
-import L from 'leaflet';
+import React, { useCallback, useEffect, useState } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Circle, Polyline, Popup, useMapEvents, useMap } from 'react-leaflet';
+import { Alert, Button, Form } from 'react-bootstrap';
 import 'leaflet/dist/leaflet.css';
-import { Form, InputGroup, Button, Alert } from 'react-bootstrap';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import ReportForm from '../Form'; // Import the ReportForm component
-import axios from 'axios';
-import polyline from '@mapbox/polyline'; // Import polyline decoder
+import ReportForm from '../Form';
+import { loadReports } from '../reports';
+import { apiBase, backendEnabled } from '../config';
+import { findRoute } from '../routing';
+import graph from '../walking-graph.json';
+import demoObstacles from '../demo-obstacles.json';
+import './Map.css';
+import { loadNetwork } from '../network';
+import polyline from '@mapbox/polyline';
 
-// Use the literal API key directly (or load from env)
-const API_KEY = process.env.REACT_APP_ORS_API_KEY;
-
-// Define custom red and blue icons
-const redIcon = new L.Icon({
-  iconUrl:
-    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const blueIcon = new L.Icon({
-  iconUrl:
-    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-// Icons for different report categories
-const icons = {
-  blocked_sidewalk: new L.Icon({
-    iconUrl:
-      'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [15, 25],
-    iconAnchor: [7, 25],
-    popupAnchor: [1, -20],
-    shadowSize: [25, 25],
-  }),
-  blocked_bike_lane: new L.Icon({
-    iconUrl:
-      'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [15, 25],
-    iconAnchor: [7, 25],
-    popupAnchor: [1, -20],
-    shadowSize: [25, 25],
-  }),
-  blocked_crosswalk: new L.Icon({
-    iconUrl:
-      'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [15, 25],
-    iconAnchor: [7, 25],
-    popupAnchor: [1, -20],
-    shadowSize: [25, 25],
-  }),
-  blocked_entrance: new L.Icon({
-    iconUrl:
-      'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-black.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [15, 25],
-    iconAnchor: [7, 25],
-    popupAnchor: [1, -20],
-    shadowSize: [25, 25],
-  }),
-};
-
-/**
- * Helper function to generate an approximated circle polygon around a center.
- * The center is [lat, lon] and the radius is in meters.
- * Returns a GeoJSON Polygon with coordinates in [lon, lat] order.
- */
-function generateCirclePolygon(center, radius, numPoints = 16) {
-  const [lat, lon] = center;
-  const R = 6371000; // Earth's radius in meters
-  const coordinates = [];
-  const latRad = (lat * Math.PI) / 180;
-  const lonRad = (lon * Math.PI) / 180;
-  for (let i = 0; i <= numPoints; i++) {
-    const angle = (i * 360) / numPoints;
-    const bearing = (angle * Math.PI) / 180;
-    const lat2 = Math.asin(
-      Math.sin(latRad) * Math.cos(radius / R) +
-        Math.cos(latRad) * Math.sin(radius / R) * Math.cos(bearing)
-    );
-    const lon2 =
-      lonRad +
-      Math.atan2(
-        Math.sin(bearing) * Math.sin(radius / R) * Math.cos(latRad),
-        Math.cos(radius / R) - Math.sin(latRad) * Math.sin(lat2)
-      );
-    coordinates.push([lon2 * (180 / Math.PI), lat2 * (180 / Math.PI)]);
-  }
-  return {
-    type: "Polygon",
-    coordinates: [coordinates],
-  };
+function MapEvents({ onPick, focus }) {
+  const map = useMap();
+  useMapEvents({ click: e => onPick([e.latlng.lat, e.latlng.lng]) });
+  useEffect(() => { if (focus) map.setView(focus, 17); }, [focus, map]);
+  useEffect(() => {
+    const observer = new ResizeObserver(() => map.invalidateSize({ pan: false }));
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
 }
 
-/**
- * Given an array of report objects (each with latitude and longitude),
- * generate a GeoJSON MultiPolygon of avoid zones (default radius 30 meters).
- */
-function getAvoidPolygons(reports, radius = 30) {
-  const multiPolyCoords = [];
-  reports.forEach((report) => {
-    const lat = parseFloat(report.latitude);
-    const lon = parseFloat(report.longitude);
-    const circlePoly = generateCirclePolygon([lat, lon], radius);
-    multiPolyCoords.push(circlePoly.coordinates);
-  });
-  if (multiPolyCoords.length === 0) return null;
-  return {
-    type: "MultiPolygon",
-    coordinates: multiPolyCoords,
-  };
+function ReportPhotos({ report }) {
+  const [urls, setUrls] = useState([]);
+  useEffect(() => {
+    const local = (report.images || []).map(file => URL.createObjectURL(file));
+    const remote = (Array.isArray(report.image_saved_to) ? report.image_saved_to : []).map(p => `${apiBase}/uploads/${p.split(/[\\/]/).pop()}`);
+    setUrls([...local, ...remote]);
+    return () => local.forEach(url => URL.revokeObjectURL(url));
+  }, [report]);
+  return urls.map(url => <img key={url} src={url} alt="Reported obstacle" style={{ maxWidth: 180, maxHeight: 120 }} />);
 }
 
-// Map Controls UI component
-const MapControls = ({ onReportClick, toggleReports, onSearch, onNavigateClick }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+export default function MapPage() {
+  const [start, setStart] = useState(null), [end, setEnd] = useState(null);
+  const [pick, setPick] = useState('start'), [focus, setFocus] = useState(null);
+  const [reports, setReports] = useState([]), [showReports, setShowReports] = useState(true);
+  const [reportLocation, setReportLocation] = useState(null);
+  const [route, setRoute] = useState(null), [error, setError] = useState('');
+  const [busy, setBusy] = useState(false), [query, setQuery] = useState('');
+  const [network, setNetwork] = useState(graph);
+  const [notice, setNotice] = useState('');
+  const [showDemo, setShowDemo] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    if (!fullscreen) return;
+    const exit = event => { if (event.key === 'Escape') setFullscreen(false); };
+    window.addEventListener('keydown', exit);
+    return () => window.removeEventListener('keydown', exit);
+  }, [fullscreen]);
+  const refresh = useCallback(async () => {
+    const items = await loadReports(); setReports(items.filter(item => !item.demo)); setRoute(null);
+  }, []);
+  useEffect(() => { refresh().catch(e => setError(e.message)); }, [refresh]);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+  const onPick = point => {
+    if (fullscreen || busy) return;
+    setError(''); setRoute(null);
+    if (pick === 'report') setReportLocation(point);
+    else if (pick === 'start') { setStart(point); setPick('end'); }
+    else setEnd(point);
+  };
+  const locate = () => {
+    if (!navigator.geolocation) { setError('Geolocation is unavailable. Select your start on the map.'); return; }
+    navigator.geolocation.getCurrentPosition(p => {
+      const point = [p.coords.latitude, p.coords.longitude];
+      setStart(point); setFocus(point); setPick('end'); setRoute(null); setError('');
+    }, () => setError('Location unavailable. Select your start on the map.'));
+  };
+  const search = async e => {
+    e.preventDefault(); if (!query.trim()) return;
+    setBusy(true); setError('');
     try {
-      const response = await axios.get(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-          searchQuery
-        )}&format=json`
-      );
-      if (response.data.length > 0) {
-        const { lat, lon } = response.data[0];
-        onSearch([parseFloat(lat), parseFloat(lon)]);
-      } else {
-        alert('Location not found. Please try a different search query.');
-      }
-    } catch (error) {
-      console.error('Error during geocoding:', error);
-      alert('Failed to search location. Please try again later.');
-    }
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
+      if (!response.ok) throw new Error('Search is unavailable. Choose a point directly on the map.');
+      const items = await response.json();
+      if (!items.length) throw new Error('Location not found.');
+      setFocus([Number(items[0].lat), Number(items[0].lon)]);
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
   };
-
-  return (
-    <div className="map-controls position-absolute top-0 end-0 p-3" style={{ zIndex: 1000 }}>
-      <div className="d-flex flex-column gap-3">
-        <InputGroup>
-          <Form.Control
-            type="search"
-            placeholder="Search location..."
-            aria-label="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <Button variant="primary" onClick={handleSearch}>
-            <i className="bi bi-search"></i>
-          </Button>
-        </InputGroup>
-        <Button variant="danger" className="d-flex align-items-center gap-2" onClick={onReportClick}>
-          <i className="bi bi-exclamation-triangle"></i>
-          Report Issue
-        </Button>
-        <Button variant="success" className="d-flex align-items-center gap-2" onClick={onNavigateClick}>
-          <i className="bi bi-geo-alt"></i>
-          Navigate
-        </Button>
-        <Button variant="secondary" className="d-flex align-items-center gap-2" onClick={toggleReports}>
-          <i className="bi bi-eye"></i>
-          Toggle Reports
-        </Button>
+  const navigate = async () => {
+    setBusy(true); setError(''); setRoute(null);
+    try {
+      if (backendEnabled) {
+        const response = await fetch(`${apiBase}/proxy/ors`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            coordinates: [start, end].map(([lat, lon]) => [lon, lat]),
+            include_demo_obstacles: showDemo,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Server routing failed.');
+        setRoute({ coordinates: polyline.decode(data.routes[0].geometry), meters: data.routes[0].summary.distance });
+      } else {
+        const loaded = await loadNetwork(start, end);
+        setNetwork(loaded);
+        setRoute(findRoute(loaded, start, end, showDemo ? [...reports, ...demoObstacles] : reports));
+      }
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  };
+  return <main className={fullscreen ? 'cityguard-map-fullscreen' : undefined}>
+    <section className="container py-3" hidden={fullscreen}>
+      <h1 className="h3">Walking routes</h1>
+      <p>{backendEnabled ? 'Connected server mode.' : 'Local demo: reports and photos stay in this browser. Routes are calculated on your device.'} Choose a start, then a destination on the map.</p>
+      <p className="small">Choose points up to 2 km apart. Walking data is downloaded from OpenStreetMap for your area; routing runs on your device. Blue lines show the loaded network. Routes snap within 75 m and avoid reports by 15 m. Streets may lack sidewalks; wheelchair accessibility is not verified. Internet is needed for new areas, map tiles and search.</p>
+      <div className="d-flex flex-wrap gap-2 mb-2">
+        <Button onClick={() => setPick('start')} variant={pick === 'start' ? 'primary' : 'outline-primary'}>Select start</Button>
+        <Button onClick={() => setPick('end')} variant={pick === 'end' ? 'primary' : 'outline-primary'}>Select destination</Button>
+        <Button onClick={locate} variant="outline-primary">Use my location</Button>
+        <Button onClick={navigate} disabled={!start || !end || busy}>{busy ? 'Loading…' : 'Calculate route'}</Button>
+        <Button onClick={() => setPick('report')} variant={pick === 'report' ? 'danger' : 'outline-danger'}>Report obstacle</Button>
+        <Button variant="outline-secondary" onClick={() => setShowReports(!showReports)}>Toggle reports</Button>
+        <Button variant={showDemo ? 'warning' : 'outline-secondary'} aria-pressed={showDemo} disabled={busy} onClick={() => {
+          setShowDemo(enabled => !enabled);
+          setRoute(null);
+          setError('');
+        }}>Test obstacles</Button>
+        <Button variant="outline-secondary" onClick={() => setFocus([44.4375, 26.09])}>Show demo area</Button>
       </div>
-    </div>
-  );
-};
-
-// Main Map Page component
-const MapPage = () => {
-  const [marker, setMarker] = useState(null);
-  const [userLocation, setUserLocation] = useState(null);
-  const [route, setRoute] = useState([]); // Array of [lat, lon] for the route
-  const [showForm, setShowForm] = useState(false);
-  const [reports, setReports] = useState([]);
-  const [showReports, setShowReports] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Fetch user location on load
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setUserLocation([latitude, longitude]);
-        },
-        (err) => {
-          setError("Please enable location permissions to use navigation");
-          console.error("Geolocation error:", err);
-        }
-      );
-    }
-  }, []);
-
-  // Fetch reports from the backend
-  useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const response = await axios.get('http://localhost:8000/reports');
-        setReports(response.data.reports);
-      } catch (error) {
-        console.error("Error fetching reports:", error);
-      }
-    };
-    fetchReports();
-  }, []);
-
-  const handleSearch = (location) => {
-    setMarker(location);
-  };
-
-  // Call the OpenRouteService API via the proxy to get a foot-walking route, avoiding user-reported zones.
-  const handleNavigateClick = async () => {
-    if (!userLocation || !marker) {
-      setError("Please select both your current location and a destination marker");
-      return;
-    }
-
-    // Build request body; note ORS expects coordinates in [lon, lat] order.
-    const body = {
-      coordinates: [
-        [userLocation[1], userLocation[0]],
-        [marker[1], marker[0]],
-      ],
-      format: "geojson",
-      profile: "foot-walking",
-      options: {},
-    };
-
-    // Add avoid polygons from reports if available
-    const avoidPolygons = getAvoidPolygons(reports, 30);
-    if (avoidPolygons) {
-      body.options.avoid_polygons = avoidPolygons;
-    }
-
-    try {
-      const response = await fetch("http://localhost:8000/proxy/ors", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(`Error: ${errorData.detail}`);
-        return;
-      }
-
-      const data = await response.json();
-      console.log("ORS API response:", data);
-      
-      // Check if the response is in GeoJSON format (with a "features" array)
-      if (data.features && data.features[0]) {
-        const coords = data.features[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
-        setRoute(coords);
-        setError(null);
-      } else if (data.routes && data.routes[0] && data.routes[0].geometry) {
-        // If the response is in the "routes" format with an encoded geometry, decode it.
-        const decodedCoords = polyline.decode(data.routes[0].geometry);
-        console.log("Decoded route coordinates:", decodedCoords);
-        setRoute(decodedCoords);
-        setError(null);
-      } else {
-        setError("No route found.");
-      }
-    } catch (err) {
-      setError("Failed to calculate route. Please try again.");
-      console.error("Routing error:", err);
-    }
-  };
-
-  // Component to handle map clicks to set a marker.
-  const LocationClickHandler = () => {
-    useMapEvents({
-      click(e) {
-        const { lat, lng } = e.latlng;
-        setMarker([lat, lng]);
-        setError(null);
-      },
-    });
-    return null;
-  };
-
-  const handleReportClick = () => {
-    setShowForm(true);
-  };
-
-  const handleCloseForm = () => {
-    setShowForm(false);
-  };
-
-  const toggleReports = () => {
-    setShowReports((prev) => !prev);
-  };
-
-  return (
-    <div className="position-relative" style={{ height: '100vh' }}>
-      <MapContainer
-        center={userLocation || [44.4432, 26.0931]}
-        zoom={20}
-        scrollWheelZoom={true}
-        style={{ height: '100%', width: '100%' }}
-      >
-        <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <LocationClickHandler />
-        {userLocation && (
-          <Marker position={userLocation} icon={blueIcon}>
-            <Popup>You are here</Popup>
-          </Marker>
-        )}
-        {marker && (
-          <Marker position={marker} icon={redIcon}>
-            <Popup>Selected location</Popup>
-          </Marker>
-        )}
-        {showReports &&
-          reports.map((report, index) => (
-            <React.Fragment key={index}>
-              <Marker
-                position={[report.latitude, report.longitude]}
-                icon={icons[report.category] || redIcon}
-              >
-                <Popup>
-                  <strong>{report.name}</strong>
-                  <br />
-                  {report.category}
-                  <br />
-                  {report.description}
-                </Popup>
-              </Marker>
-              <Circle
-                center={[report.latitude, report.longitude]}
-                radius={10} // 10 meters red zone for display
-                pathOptions={{ color: 'red', fillColor: 'red', fillOpacity: 0.2 }}
-              />
-            </React.Fragment>
-          ))}
-        {route.length > 0 && (
-          <Polyline 
-            positions={route}
-            color="blue"
-            weight={5}
-            opacity={0.7}
-          />
-        )}
+      <Form onSubmit={search} className="d-flex gap-2 mb-2">
+        <Form.Control aria-label="Search address" placeholder="Search address" value={query} onChange={e => setQuery(e.target.value)} />
+        <Button type="submit" disabled={busy || !query.trim()}>Search</Button>
+      </Form>
+      <p role="status">Selecting: {pick === 'end' ? 'destination' : pick === 'report' ? 'obstacle location' : 'start'}. {reports.length} saved reports.</p>
+      {route && <Alert variant="success" role="status">Route: {Math.round(route.meters)} m along the walking network. The green line starts and ends at the snapped network points.</Alert>}
+      {notice && <Alert variant="success">{notice}</Alert>}
+      {error && <Alert variant="danger">{error}</Alert>}
+    </section>
+    <div className="cityguard-map-frame">
+      <Button className="cityguard-fullscreen-button" variant="light" onClick={() => {
+        setFullscreen(value => !value);
+        if (!fullscreen) window.scrollTo(0, 0);
+      }}>{fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}</Button>
+      <MapContainer center={[44.4375, 26.09]} zoom={16} style={{ height: '100%', width: '100%' }}>
+        <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <Polyline positions={network.edges.map(([a,b]) => [network.nodes[a], network.nodes[b]])} pathOptions={{ color: '#1976d2', weight: 2, opacity: .45 }} />
+        <MapEvents onPick={onPick} focus={focus} />
+        {start && <CircleMarker center={start} radius={9} pathOptions={{ color: 'blue' }}><Popup>Start</Popup></CircleMarker>}
+        {end && <CircleMarker center={end} radius={9} pathOptions={{ color: 'purple' }}><Popup>Destination</Popup></CircleMarker>}
+        {showReports && reports.map((r, i) => <Circle key={r.id || i} center={[r.latitude, r.longitude]} radius={15} pathOptions={{ color: 'red' }}><Popup><strong>{r.name}</strong><p>{r.description}</p><ReportPhotos report={r} /></Popup></Circle>)}
+        {showDemo && demoObstacles.map(obstacle => <Circle
+          key={obstacle.name}
+          center={[obstacle.latitude, obstacle.longitude]}
+          radius={15}
+          className="cityguard-test-obstacle"
+          pathOptions={{ color: '#ad6300', dashArray: '4 3' }}
+        ><Popup><strong>{obstacle.name}</strong><p>Simulated obstacle</p></Popup></Circle>)}
+        {route && <Polyline positions={route.coordinates} pathOptions={{ color: '#16803c', weight: 6 }} />}
       </MapContainer>
-      <MapControls
-        onReportClick={handleReportClick}
-        toggleReports={toggleReports}
-        onSearch={handleSearch}
-        onNavigateClick={handleNavigateClick}
-      />
-      {error && (
-        <Alert variant="danger" className="position-absolute top-0 start-0 m-3">
-          {error}
-        </Alert>
-      )}
-      {showForm && (
-        <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 1000 }}>
-          <ReportForm fetchReports={() => {}} onClose={handleCloseForm} />
-        </div>
-      )}
     </div>
-  );
-};
-
-export default MapPage;
+    {reportLocation && <div role="dialog" aria-label="Report obstacle" aria-modal="true" className="position-fixed top-0 start-0 w-100 h-100 p-3" style={{ zIndex: 2000, overflowY: 'auto', background: 'rgba(0,0,0,.5)' }}>
+      <div className="bg-white p-3 mx-auto rounded" style={{ maxWidth: 550 }}><ReportForm location={reportLocation} fetchReports={async () => { await refresh(); setNotice('Report saved. Calculate the route again to include this obstacle.'); }} onClose={() => setReportLocation(null)} /></div>
+    </div>}
+  </main>;
+}

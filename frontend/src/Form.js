@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { saveReport } from './reports';
+import { backendEnabled } from './config';
 import { Form, Button, Alert } from 'react-bootstrap';
 import './App.css';
 
-function ReportForm({ fetchReports, onClose }) {
+function ReportForm({ fetchReports, onClose, location }) {
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -13,6 +14,8 @@ function ReportForm({ fetchReports, onClose }) {
     image: [],
   });
   const [geoError, setGeoError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [geoLocation, setGeoLocation] = useState({
     latitude: '',
     longitude: '',
@@ -20,7 +23,9 @@ function ReportForm({ fetchReports, onClose }) {
 
   // Use the browser's Geolocation API to get the current location
   useEffect(() => {
-    if (navigator.geolocation) {
+    if (location) {
+      setGeoLocation({ latitude: String(location[0]), longitude: String(location[1]) });
+    } else if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setGeoLocation({
@@ -35,7 +40,7 @@ function ReportForm({ fetchReports, onClose }) {
     } else {
       setGeoError('Geolocation is not supported by this browser.');
     }
-  }, []);
+  }, [location]);
 
   // Sync geolocation data with formData
   useEffect(() => {
@@ -48,6 +53,8 @@ function ReportForm({ fetchReports, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
+    setSubmitError('');
     const data = new FormData();
 
     const submissionData = {
@@ -67,14 +74,13 @@ function ReportForm({ fetchReports, onClose }) {
     });
 
     try {
-      await axios.post('http://localhost:8000/submit', data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await saveReport(data);
       await fetchReports();
-      alert('Report submitted successfully!');
       onClose(); // Close the form after submission
     } catch (error) {
-      alert('Failed to submit report. Please try again later.');
+      setSubmitError(error.message || 'Failed to save report.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -102,6 +108,9 @@ function ReportForm({ fetchReports, onClose }) {
       </div>
       <Form onSubmit={handleSubmit}>
         <h2>Submit Report</h2>
+        <p>{backendEnabled ? 'Saved to the connected server.' : 'Saved only in this browser, including images. Images: maximum 5 MB total.'}</p>
+        <p>Location: {geoLocation.latitude}, {geoLocation.longitude}</p>
+        {submitError && <Alert variant="danger">{submitError}</Alert>}
         {geoError && <Alert variant="danger">{geoError}</Alert>}
         <Form.Group className="mb-3">
           <Form.Label>Name</Form.Label>
@@ -149,11 +158,10 @@ function ReportForm({ fetchReports, onClose }) {
             onChange={handleChange}
             accept="image/*"
             multiple
-            required
           />
         </Form.Group>
-        <Button variant="primary" type="submit">
-          Submit Report
+        <Button variant="primary" type="submit" disabled={saving || !geoLocation.latitude}>
+          {saving ? 'Saving…' : 'Save report'}
         </Button>
       </Form>
     </div>

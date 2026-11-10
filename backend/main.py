@@ -4,8 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from typing import List, Optional
 import os
-import random
+import json
 import httpx
+import math
+from pathlib import Path
 
 app = FastAPI()
 
@@ -19,7 +21,9 @@ app.add_middleware(
 )
 
 # Serve static files from the "uploads" directory
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+UPLOADS = Path(__file__).resolve().parent / "uploads"
+UPLOADS.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS)), name="uploads")
 
 # In-memory store for reports
 reports = []
@@ -45,17 +49,18 @@ async def submit_report(
     image: Optional[List[UploadFile]] = File(None)  # changed to optional
 ):
     # Ensure the uploads directory exists
-    uploads_dir = "uploads"
+    uploads_dir = str(UPLOADS)
     os.makedirs(uploads_dir, exist_ok=True)
     
     file_paths = []
     if image:  # handle if image is not provided
         for img in image:
-            file_path = os.path.join(uploads_dir, img.filename)
+            from uuid import uuid4
+            file_path = os.path.join(uploads_dir, f"{uuid4().hex}{Path(img.filename or '').suffix}")
             with open(file_path, "wb") as f:
                 content = await img.read()
                 f.write(content)
-            file_paths.append(file_path)
+            file_paths.append(f"uploads/{Path(file_path).name}")
     
     # Create a report dictionary and store it
     report = {
@@ -75,11 +80,16 @@ async def submit_report(
 async def get_reports():
     return JSONResponse(content={"reports": reports})
 
-# Seed 50 random reports on startup
+# The frontend and optional backend use the same repeatable demo set.
+def demo_obstacles():
+    dataset = Path(__file__).resolve().parents[1] / "frontend" / "src" / "demo-obstacles.json"
+    return json.loads(dataset.read_text(encoding="utf-8"))
+
+
 @app.on_event("startup")
 async def seed_reports():
     # Ensure the uploads directory exists
-    uploads_dir = "uploads"
+    uploads_dir = str(UPLOADS)
     os.makedirs(uploads_dir, exist_ok=True)
     
     # Create a dummy image file if it doesn't exist
@@ -88,31 +98,34 @@ async def seed_reports():
         with open(dummy_image_path, "wb") as f:
             f.write(b"dummy image content")
     
-    # Center point for Cismigiu Park, Bucharest
-    center_lat = 44.4395
-    center_lon = 26.0908
-    categories = ['blocked_sidewalk', 'blocked_bike_lane', 'blocked_crosswalk', 'blocked_entrance']
-    
-    if not reports:
-        for i in range(50):
-            lat_offset = random.uniform(-0.004, 0.004)
-            lon_offset = random.uniform(-0.004, 0.004)
-            report = {
-                "name": f"Test Report {i+1}",
-                "category": random.choice(categories),
-                "description": f"Randomly generated report {i+1} for testing purposes.",
-                "latitude": center_lat + lat_offset,
-                "longitude": center_lon + lon_offset,
-                "image_saved_to": [dummy_image_path],
-            }
-            reports.append(report)
+    if os.getenv("CITYGUARD_SEED_DEMO") == "true" and not reports:
+        reports.extend(demo_obstacles())
 
-ORS_API_KEY = "" # Load the API key from environment variables
+ORS_API_KEY = os.getenv("ORS_API_KEY", "")
 
 @app.post("/proxy/ors")
 async def proxy_openrouteservice(request: Request):
+    if not ORS_API_KEY:
+        raise HTTPException(status_code=503, detail="Configure ORS_API_KEY on the backend to enable server routing.")
     try:
         body = await request.json()
+        include_demo = body.pop("include_demo_obstacles", None)
+        route_reports = reports
+        if include_demo is not None:
+            route_reports = [report for report in reports if not report.get("demo")]
+            if include_demo is True:
+                route_reports.extend(demo_obstacles())
+        # Server mode also avoids saved reports, using the same 15 m radius.
+        polygons = []
+        for report in route_reports:
+            lat, lon = report['latitude'], report['longitude']
+            ring = []
+            for i in range(17):
+                angle = 2 * math.pi * (i % 16) / 16
+                ring.append([lon + 15 * math.cos(angle) / (111195 * math.cos(math.radians(lat))), lat + 15 * math.sin(angle) / 111195])
+            polygons.append([ring])
+        if polygons:
+            body.setdefault('options', {})['avoid_polygons'] = {'type': 'MultiPolygon', 'coordinates': polygons}
         headers = {
             "Content-Type": "application/json",
             "Authorization": ORS_API_KEY,

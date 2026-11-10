@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import MapPage from './Pages/Map';
@@ -9,6 +9,7 @@ import './App.css';
 function App() {
   return (
     <Router>
+      <div className="cityguard-shell">
       {/* Updated Navbar (only change) */}
       <nav className="navbar navbar-expand-lg navbar-dark shadow-sm" style={{
         backgroundColor: '#1B5E20', // Dark green
@@ -31,6 +32,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/map" element={<MapPage />} />
       </Routes>
+      </div>
     </Router>
   );
 }

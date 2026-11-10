@@ -1,0 +1,352 @@
+[
+  {
+    "name": "Test Report 1",
+    "latitude": 44.43554907716438,
+    "longitude": 26.090855586302656,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 2",
+    "latitude": 44.43725508768671,
+    "longitude": 26.092020252443106,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 3",
+    "latitude": 44.44201447253675,
+    "longitude": 26.08708776540421,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 4",
+    "latitude": 44.44135563383438,
+    "longitude": 26.089596710044148,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 5",
+    "latitude": 44.44059686744586,
+    "longitude": 26.087973857795077,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 6",
+    "latitude": 44.44066769067012,
+    "longitude": 26.087001221507045,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 7",
+    "latitude": 44.44086679445207,
+    "longitude": 26.092223877580093,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 8",
+    "latitude": 44.44256083917804,
+    "longitude": 26.088021371851863,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 9",
+    "latitude": 44.43775351452455,
+    "longitude": 26.08795251911618,
+    "category": "blocked_entrance",
+    "demo": true
+  },
+  {
+    "name": "Test Report 10",
+    "latitude": 44.441824919817975,
+    "longitude": 26.091848548970372,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 11",
+    "latitude": 44.442794208325445,
+    "longitude": 26.088801456206667,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 12",
+    "latitude": 44.43772922136821,
+    "longitude": 26.091386461082102,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 13",
+    "latitude": 44.440476551283155,
+    "longitude": 26.09071313055344,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 14",
+    "latitude": 44.44105835433864,
+    "longitude": 26.092444053604456,
+    "category": "blocked_entrance",
+    "demo": true
+  },
+  {
+    "name": "Test Report 15",
+    "latitude": 44.439419789642095,
+    "longitude": 26.092542552904412,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 16",
+    "latitude": 44.438647269891575,
+    "longitude": 26.09410481762439,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 17",
+    "latitude": 44.43674099717662,
+    "longitude": 26.08751395283379,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 18",
+    "latitude": 44.44057069770806,
+    "longitude": 26.08779104465917,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 19",
+    "latitude": 44.43724225475639,
+    "longitude": 26.091286925592648,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 20",
+    "latitude": 44.43721258873679,
+    "longitude": 26.087455644893648,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 21",
+    "latitude": 44.44153105745092,
+    "longitude": 26.094592036967352,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 22",
+    "latitude": 44.43644896126352,
+    "longitude": 26.09043570858166,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 23",
+    "latitude": 44.43735031636059,
+    "longitude": 26.090528659583256,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 24",
+    "latitude": 44.4356228612382,
+    "longitude": 26.09029105279893,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 25",
+    "latitude": 44.4387458848618,
+    "longitude": 26.08918812659122,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 26",
+    "latitude": 44.44137296029739,
+    "longitude": 26.08992755823508,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 27",
+    "latitude": 44.4407386014536,
+    "longitude": 26.08777310117446,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 28",
+    "latitude": 44.43919762741961,
+    "longitude": 26.08996916321218,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 29",
+    "latitude": 44.4393944038935,
+    "longitude": 26.09332937281318,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 30",
+    "latitude": 44.43839412265085,
+    "longitude": 26.092193944617364,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 31",
+    "latitude": 44.443100131809715,
+    "longitude": 26.090089103744553,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 32",
+    "latitude": 44.43720787383803,
+    "longitude": 26.087388777936997,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 33",
+    "latitude": 44.436954197477554,
+    "longitude": 26.092744861555474,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 34",
+    "latitude": 44.44015960980766,
+    "longitude": 26.093703631079944,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 35",
+    "latitude": 44.440970366947354,
+    "longitude": 26.09123158634566,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 36",
+    "latitude": 44.43908843592741,
+    "longitude": 26.090000609177352,
+    "category": "blocked_entrance",
+    "demo": true
+  },
+  {
+    "name": "Test Report 37",
+    "latitude": 44.44276945621148,
+    "longitude": 26.088288953398543,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 38",
+    "latitude": 44.43795675048791,
+    "longitude": 26.09129443004653,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 39",
+    "latitude": 44.44109780959785,
+    "longitude": 26.09470940479748,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 40",
+    "latitude": 44.44340821284242,
+    "longitude": 26.09067007250637,
+    "category": "blocked_bike_lane",
+    "demo": true
+  },
+  {
+    "name": "Test Report 41",
+    "latitude": 44.44236299007759,
+    "longitude": 26.091247435924785,
+    "category": "blocked_entrance",
+    "demo": true
+  },
+  {
+    "name": "Test Report 42",
+    "latitude": 44.44295278674178,
+    "longitude": 26.094539902231844,
+    "category": "blocked_entrance",
+    "demo": true
+  },
+  {
+    "name": "Test Report 43",
+    "latitude": 44.44291617367417,
+    "longitude": 26.08717353528105,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 44",
+    "latitude": 44.442973194802185,
+    "longitude": 26.088266642335057,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 45",
+    "latitude": 44.43553730266169,
+    "longitude": 26.091901488562304,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 46",
+    "latitude": 44.44000493254327,
+    "longitude": 26.093530118360373,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 47",
+    "latitude": 44.43799311473966,
+    "longitude": 26.09250057043247,
+    "category": "blocked_entrance",
+    "demo": true
+  },
+  {
+    "name": "Test Report 48",
+    "latitude": 44.44343730293401,
+    "longitude": 26.087854769881073,
+    "category": "blocked_crosswalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 49",
+    "latitude": 44.437139727871866,
+    "longitude": 26.08872445992865,
+    "category": "blocked_sidewalk",
+    "demo": true
+  },
+  {
+    "name": "Test Report 50",
+    "latitude": 44.436415744883945,
+    "longitude": 26.088941483385117,
+    "category": "blocked_bike_lane",
+    "demo": true
+  }
+]
