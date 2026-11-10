@@ -22,10 +22,6 @@ Open `http://localhost:3000/#/map`. Click to select a start and destination, or 
 
 Data: © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright). The bundled graph includes source and extraction metadata. Regenerate it from OSM JSON with `node scripts/prepare-graph.cjs path/to/osm.json`, run from `frontend/`.
 
-## GitHub Pages
-
-In repository **Settings → Pages**, select **GitHub Actions** as the source. Push to `main` or run `.github/workflows/pages.yml` manually. The workflow tests and builds only `frontend/` in standalone mode. Hash routing and relative assets support `/cafebabe-CityGuard/#/map`, including direct refresh. The workflow has not been deployed from this workspace.
-
 ## Opt in to the optional backend
 
 Create `frontend/.env.local` (see `frontend/.env.example`):
